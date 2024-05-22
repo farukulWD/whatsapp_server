@@ -39,3 +39,31 @@ export const onBoardUser = async (req, res, next) => {
     next(error);
   }
 };
+
+export const getAllUser = async (req, res, next) => {
+  try {
+    const Prisma = getPrismaInstance();
+    const users = await Prisma.user.findMany({
+      select: {
+        email: true,
+        name: true,
+        id: true,
+        profilePicture: true,
+        about: true,
+      },
+    });
+
+    const groupedUsers = users.reduce((acc, user) => {
+      const firstLetter = user.name.charAt(0).toUpperCase();
+      if (!acc[firstLetter]) {
+        acc[firstLetter] = [];
+      }
+      acc[firstLetter].push(user);
+      return acc;
+    }, {});
+
+    return res.json({ message: "Succeed", status: true, data: groupedUsers });
+  } catch (error) {
+    next(error);
+  }
+};
