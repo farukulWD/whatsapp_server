@@ -9,6 +9,6 @@ const router = Router();
 
 router.post("/check-user", checkUser);
 router.post("/onboard-user", onBoardUser);
-router.get("/get-all-users", getAllUser);
+router.get("/get-contacts", getAllUser);
 
 export default router;
