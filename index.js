@@ -26,11 +26,14 @@ const io = new Server(server, {
 global.onlineUsers = new Map();
 
 io.on("connection", (socket) => {
+  global.chatSocket = socket;
   socket.on("add-user", (userId) => {
-    console.log(userId);
+    onlineUsers.set(userId, socket.id);
+    console.log(onlineUsers);
   });
   socket.on("send-msg", (data) => {
-    const sendUserSocket = onlineUsers.get(data.to);
+    const sendUserSocket = onlineUsers.get(data?.to);
+
     if (sendUserSocket) {
       socket.to(sendUserSocket).emit("msg-receive", {
         from: data.from,
