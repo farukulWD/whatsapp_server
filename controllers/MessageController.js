@@ -79,23 +79,27 @@ export const getMessages = async (req, res, next) => {
 
 export const addImageMessage = async (req, res, next) => {
   try {
-    if (req.file) {
+    if (req?.file) {
       const date = Date.now();
-      const filename = "uploads/images" + date + req.file.originalName;
-      renameSync(req.file.path, filename);
+      const filename = "uploads/images/" + date + req?.file?.originalname;
+      renameSync(req?.file?.path, filename);
       const { from, to } = req.query;
       const Prisma = getPrismaInstance();
       if (from && to) {
         const message = await Prisma.messages.create({
-          message: filename,
-          sender: { connect: { id: parseInt(from) } },
-          receiver: { connect: { id: parseInt(to) } },
-          type: "image",
+          data: {
+            message: filename,
+            sender: { connect: { id: parseInt(from) } },
+            receiver: { connect: { id: parseInt(to) } },
+            type: "image",
+          },
+          include: { sender: true, receiver: true },
         });
         return res.status(201).json({ message });
       }
-      return res.status(400).json("From, To are required");
+      return res.status(400).send("From, To are required");
     }
+    return res.status(400).send("Image is Required");
   } catch (error) {
     next(error);
   }
