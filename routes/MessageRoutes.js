@@ -1,5 +1,6 @@
 import { Router } from "express";
 import {
+  addAudioMessage,
   addImageMessage,
   addMessage,
   getMessages,
@@ -8,6 +9,7 @@ import multer from "multer";
 
 const router = Router();
 
+const upload = multer({ dest: "uploads/recorded" });
 const uploadImage = multer({ dest: "uploads/images" });
 
 router.post("/add-message", addMessage);
@@ -17,5 +19,6 @@ router.post(
   uploadImage.single("image"),
   addImageMessage
 );
+router.post("/add-audio-messages", upload.single("audio"), addAudioMessage);
 
 export default router;
