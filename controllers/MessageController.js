@@ -105,7 +105,6 @@ export const addImageMessage = async (req, res, next) => {
   }
 };
 export const addAudioMessage = async (req, res, next) => {
-  console.log(req?.file);
   try {
     if (req?.file) {
       const date = Date.now();
@@ -130,5 +129,119 @@ export const addAudioMessage = async (req, res, next) => {
     return res.status(400).send("audio is Required");
   } catch (error) {
     next(error);
+  }
+};
+
+export const getInitialContactsWithMessages = async (req, res, next) => {
+  try {
+    const userId = parseInt(req.params.from);
+    if (isNaN(userId)) {
+      return res.status(400).json({ error: "Invalid user ID" });
+    }
+
+    const Prisma = getPrismaInstance();
+
+    const user = await Prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        sendMessages: {
+          include: {
+            sender: true,
+            receiver: true,
+          },
+          orderBy: {
+            createdAt: "desc",
+          },
+        },
+        receivedMessages: {
+          include: {
+            sender: true,
+            receiver: true,
+          },
+          orderBy: {
+            createdAt: "desc",
+          },
+        },
+      },
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const messages = [...user.sendMessages, ...user.receivedMessages];
+    messages.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+
+    const users = new Map();
+    const messageStatusChange = [];
+
+    messages.forEach((msg) => {
+      const isSender = msg.senderId === userId;
+      const calculateId = isSender ? msg.receiverId : msg.senderId;
+
+      if (msg.messageStatus === "sent") {
+        messageStatusChange.push(msg.id);
+      }
+
+      const {
+        id,
+        type,
+        messageStatus,
+        senderId,
+        receiverId,
+        message,
+        createdAt,
+      } = msg;
+
+      if (!users.has(calculateId)) {
+        let userInfo = {
+          messageId: id,
+          type,
+          messageStatus,
+          senderId,
+          receiverId,
+          message,
+          createdAt,
+        };
+
+        if (isSender) {
+          userInfo = {
+            ...userInfo,
+            ...msg.receiver,
+            totalUnreadMessages: 0,
+          };
+        } else {
+          userInfo = {
+            ...userInfo,
+            ...msg.sender,
+            totalUnreadMessages: messageStatus !== "read" ? 1 : 0,
+          };
+        }
+
+        users.set(calculateId, userInfo);
+      } else if (messageStatus !== "read" && !isSender) {
+        const existingUser = users.get(calculateId);
+        users.set(calculateId, {
+          ...existingUser,
+          totalUnreadMessages: existingUser.totalUnreadMessages + 1,
+        });
+      }
+    });
+
+    if (messageStatusChange.length) {
+      await Prisma.messages.updateMany({
+        where: {
+          id: { in: messageStatusChange },
+        },
+        data: { messageStatus: "delivered" },
+      });
+    }
+
+    res.status(200).json({
+      users: Array.from(users.values()),
+      onlineUsers: Array.from(onlineUsers.keys()),
+    });
+  } catch (err) {
+    next(err);
   }
 };

@@ -3,6 +3,7 @@ import {
   addAudioMessage,
   addImageMessage,
   addMessage,
+  getInitialContactsWithMessages,
   getMessages,
 } from "../controllers/MessageController.js";
 import multer from "multer";
@@ -20,5 +21,6 @@ router.post(
   addImageMessage
 );
 router.post("/add-audio-messages", upload.single("audio"), addAudioMessage);
+router.get("/get-initial-contacts/:from", getInitialContactsWithMessages);
 
 export default router;
